@@ -6,6 +6,6 @@ import "database/sql"
 type Database interface {
 	Ping() error
 	Shutdown() error
-	Fetch(string, interface{}, ...interface{})
+	Fetch(string, interface{}, ...interface{}) error
 	Exec(string, ...interface{}) (sql.Result, error)
 }
