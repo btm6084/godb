@@ -49,7 +49,11 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 
 			switch isMySQLNumeric(types[k].DatabaseTypeName()) {
 			case true:
-				r = append(r, v...)
+				if len(v) == 0 {
+					r = append(r, []byte{'n', 'u', 'l', 'l'}...)
+				} else {
+					r = append(r, v...)
+				}
 			case false:
 				r = append(r, '"')
 				if bytes.Count(v, []byte{'"'}) > 0 {
