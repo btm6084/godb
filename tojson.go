@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+
+	"github.com/btm6084/gojson"
 )
 
 // ToJSON extracts a given SQL Rows result as json.
@@ -55,6 +57,12 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 					r = append(r, v...)
 				}
 			case false:
+				// Don't quote or escape valid json.
+				if gojson.IsJSON(v) {
+					r = append(r, v...)
+					break
+				}
+
 				r = append(r, '"')
 				if bytes.Count(v, []byte{'"'}) > 0 {
 					r = append(r, bytes.Replace(v, []byte{'"'}, []byte{'\\', '"'}, -1)...)
@@ -74,7 +82,6 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 	}
 
 	buf = append(buf, ']')
-
 	return buf, nil
 }
 
