@@ -43,7 +43,16 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 		} else {
 			r = []byte{',', '{'}
 		}
+
 		for k, v := range data {
+			if len(v) == 0 {
+				continue
+			}
+
+			if k != 0 && k < len(data) {
+				r = append(r, ',')
+			}
+
 			r = append(r, '"')
 			r = append(r, cols[k]...)
 			r = append(r, '"')
@@ -70,10 +79,6 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 					r = append(r, v...)
 				}
 				r = append(r, '"')
-			}
-
-			if k < len(data)-1 {
-				r = append(r, ',')
 			}
 		}
 
