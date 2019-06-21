@@ -9,7 +9,6 @@ import (
 	"database/sql"
 
 	// Causes side effects in database/sql and allows us to connect to sqlserver.
-
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
