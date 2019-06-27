@@ -17,7 +17,7 @@ type MSSQLDatastore struct {
 	db *sql.DB
 }
 
-// NewMSSQLDatastore configures and returns a usable MSSQLDatastore
+// NewMSSQLDatastore configures and returns a usable MSSQLDatastore from parameters.
 func NewMSSQLDatastore(user, pass, dbName, host, port, appname string) *MSSQLDatastore {
 
 	query := url.Values{}
@@ -30,7 +30,13 @@ func NewMSSQLDatastore(user, pass, dbName, host, port, appname string) *MSSQLDat
 		Host:     fmt.Sprintf("%s:%s", host, port),
 		RawQuery: query.Encode(),
 	}
-	db, err := sql.Open("sqlserver", u.String())
+
+	return NewMSSQLDatastoreCS(u.String())
+}
+
+// NewMSSQLDatastoreCS configures and returns a usable MSSQLDatastore from a connect string.
+func NewMSSQLDatastoreCS(connectString string) *MSSQLDatastore {
+	db, err := sql.Open("sqlserver", connectString)
 	if err != nil {
 		log.Println(err)
 		return nil

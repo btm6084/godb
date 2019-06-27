@@ -16,9 +16,14 @@ type PostgresDatastore struct {
 	db *sql.DB
 }
 
-// NewPostgresDatastore configures and returns a usable PostgresDatastore
+// NewPostgresDatastore configures and returns a usable PostgresDatastore from parameters.
 func NewPostgresDatastore(user, pass, dbName, host, port string) *PostgresDatastore {
-	connectString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", user, pass, dbName, host, port)
+	return NewPostgresDatastoreCS(fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", user, pass, dbName, host, port))
+
+}
+
+// NewPostgresDatastoreCS configures and returns a usable PostgresDatastore from a connect string.
+func NewPostgresDatastoreCS(connectString string) *PostgresDatastore {
 	db, err := sql.Open("postgres", connectString)
 	if err != nil {
 		log.Println(err)
