@@ -9,17 +9,14 @@ import (
 )
 
 // ToJSON extracts a given SQL Rows result as json.
-func ToJSON(rows *sql.Rows) ([]byte, error) {
+func ToJSON(rows Rows) ([]byte, error) {
 	if rows == nil {
 		return nil, errors.New("Empty result set")
 	}
 
-	cols, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
+	defer rows.Close()
 
-	types, err := rows.ColumnTypes()
+	cols, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
@@ -58,28 +55,19 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 			r = append(r, '"')
 			r = append(r, ':')
 
-			switch isMySQLNumeric(types[k].DatabaseTypeName()) {
-			case true:
-				if len(v) == 0 {
-					r = append(r, []byte{'n', 'u', 'l', 'l'}...)
-				} else {
-					r = append(r, v...)
-				}
-			case false:
-				// Don't quote or escape valid json.
-				if gojson.IsJSON(v) {
-					r = append(r, v...)
-					break
-				}
-
-				r = append(r, '"')
-				if bytes.Count(v, []byte{'"'}) > 0 {
-					r = append(r, bytes.Replace(v, []byte{'"'}, []byte{'\\', '"'}, -1)...)
-				} else {
-					r = append(r, v...)
-				}
-				r = append(r, '"')
+			// Don't quote or escape valid json.
+			if gojson.IsJSON(v) {
+				r = append(r, v...)
+				break
 			}
+
+			r = append(r, '"')
+			if bytes.Count(v, []byte{'"'}) > 0 {
+				r = append(r, bytes.Replace(v, []byte{'"'}, []byte{'\\', '"'}, -1)...)
+			} else {
+				r = append(r, v...)
+			}
+			r = append(r, '"')
 		}
 
 		r = append(r, '}')
@@ -88,10 +76,4 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 
 	buf = append(buf, ']')
 	return buf, nil
-}
-
-func isMySQLNumeric(t string) bool {
-	return t == `INT` || t == `TINYINT` || t == `SMALLINT` || t == `FLOAT` ||
-		t == `DOUBLE` || t == `INTEGER` || t == `MEDIUMINT` || t == `BIGINT` ||
-		t == `DECIMAL` || t == `NUMERIC` || t == `BIT`
 }
