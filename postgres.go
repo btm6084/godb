@@ -72,6 +72,11 @@ func (p *PostgresDatastore) Fetch(query string, container interface{}, args ...i
 	return err
 }
 
+// Query provides a simple query operation. You will receive the raw sql.Rows object.
+func (p *PostgresDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return p.db.Query(query, args...)
+}
+
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (p *PostgresDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {

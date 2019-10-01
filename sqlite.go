@@ -35,9 +35,9 @@ func NewSQLiteDatastore(file string) *SQLiteDatastore {
 }
 
 // Ping sends a ping to the server and returns an error if it cannot connect.
-func (p *SQLiteDatastore) Ping() error {
+func (s *SQLiteDatastore) Ping() error {
 	var result []string
-	rows, err := p.db.Query("SELECT strftime('%s', 'now');")
+	rows, err := s.db.Query("SELECT strftime('%s', 'now');")
 	defer rows.Close()
 	Unmarshal(rows, &result)
 
@@ -49,14 +49,14 @@ func (p *SQLiteDatastore) Ping() error {
 }
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
-func (p *SQLiteDatastore) Shutdown() error {
-	p.db.Close()
+func (s *SQLiteDatastore) Shutdown() error {
+	s.db.Close()
 	return nil
 }
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
-func (p *SQLiteDatastore) Fetch(query string, container interface{}, args ...interface{}) error {
-	rows, err := p.db.Query(query, args...)
+func (s *SQLiteDatastore) Fetch(query string, container interface{}, args ...interface{}) error {
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return err
 	}
@@ -65,8 +65,13 @@ func (p *SQLiteDatastore) Fetch(query string, container interface{}, args ...int
 	return err
 }
 
+// Query provides a simple query operation. You will receive the raw sql.Rows object.
+func (s *SQLiteDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return s.db.Query(query, args...)
+}
+
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
-func (p *SQLiteDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return p.db.Exec(query, args...)
+func (s *SQLiteDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return s.db.Exec(query, args...)
 }
