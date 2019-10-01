@@ -58,7 +58,7 @@ func ToJSON(rows Rows) ([]byte, error) {
 			// Don't quote or escape valid json.
 			if gojson.IsJSON(v) {
 				r = append(r, v...)
-				break
+				continue
 			}
 
 			r = append(r, '"')
