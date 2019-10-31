@@ -62,11 +62,18 @@ func ToJSON(rows Rows) ([]byte, error) {
 			}
 
 			r = append(r, '"')
-			if bytes.Count(v, []byte{'"'}) > 0 {
-				r = append(r, bytes.Replace(v, []byte{'"'}, []byte{'\\', '"'}, -1)...)
-			} else {
-				r = append(r, v...)
+
+			// Escape any backslashes.
+			if bytes.Count(v, []byte{'\\'}) > 0 {
+				v = bytes.ReplaceAll(v, []byte{'\\'}, []byte{'\\', '\\'})
 			}
+
+			// Escape any quotes.
+			if bytes.Count(v, []byte{'"'}) > 0 {
+				v = bytes.ReplaceAll(v, []byte{'"'}, []byte{'\\', '"'})
+			}
+
+			r = append(r, v...)
 			r = append(r, '"')
 		}
 
