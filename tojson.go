@@ -9,7 +9,7 @@ import (
 )
 
 // ToJSON extracts a given SQL Rows result as json.
-func ToJSON(rows Rows) ([]byte, error) {
+func ToJSON(rows *sql.Rows) ([]byte, error) {
 	if rows == nil {
 		return nil, errors.New("Empty result set")
 	}
@@ -63,12 +63,10 @@ func ToJSON(rows Rows) ([]byte, error) {
 
 			r = append(r, '"')
 
-			// Escape any backslashes.
 			if bytes.Count(v, []byte{'\\'}) > 0 {
 				v = bytes.ReplaceAll(v, []byte{'\\'}, []byte{'\\', '\\'})
 			}
 
-			// Escape any quotes.
 			if bytes.Count(v, []byte{'"'}) > 0 {
 				v = bytes.ReplaceAll(v, []byte{'"'}, []byte{'\\', '"'})
 			}
