@@ -66,7 +66,7 @@ func (s *SQLiteDatastore) Fetch(query string, container interface{}, args ...int
 }
 
 // Query provides a simple query operation. You will receive the raw sql.Rows object.
-func (s *SQLiteDatastore) Query(query string, args ...interface{}) (Rows, error) {
+func (s *SQLiteDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return s.db.Query(query, args...)
 }
 

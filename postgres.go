@@ -73,7 +73,7 @@ func (p *PostgresDatastore) Fetch(query string, container interface{}, args ...i
 }
 
 // Query provides a simple query operation. You will receive the raw sql.Rows object.
-func (p *PostgresDatastore) Query(query string, args ...interface{}) (Rows, error) {
+func (p *PostgresDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return p.db.Query(query, args...)
 }
 

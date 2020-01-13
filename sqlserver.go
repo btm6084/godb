@@ -92,3 +92,8 @@ func (m *MSSQLDatastore) Fetch(query string, container interface{}, args ...inte
 func (m *MSSQLDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return m.db.Exec(query, args...)
 }
+
+// Query provides a simple query operation. You will receive the raw sql.Rows object.
+func (m *MSSQLDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return m.db.Query(query, args...)
+}
