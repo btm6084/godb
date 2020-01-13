@@ -3,7 +3,7 @@ module github.com/btm6084/godb
 go 1.12
 
 require (
-	github.com/btm6084/gojson v0.0.0-20191231212244-c52575cf475e
+	github.com/btm6084/gojson v0.0.0-20200113175427-dc59d8597892
 	github.com/denisenkom/go-mssqldb v0.0.0-20191128021309-1d7a30a10f73
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.1.1
