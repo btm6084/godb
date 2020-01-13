@@ -10,4 +10,5 @@ type Database interface {
 	Shutdown() error
 	Fetch(string, interface{}, ...interface{}) error
 	Exec(string, ...interface{}) (sql.Result, error)
+	Query(string, ...interface{}) (*sql.Rows, error)
 }
