@@ -1,12 +1,13 @@
 package godb
 
 import (
-	"bytes"
 	"database/sql"
 	"errors"
 
 	"github.com/btm6084/gojson"
 )
+
+var hex = "0123456789abcdef"
 
 // ToJSON extracts a given SQL Rows result as json.
 func ToJSON(rows *sql.Rows) ([]byte, error) {
@@ -63,15 +64,27 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 
 			r = append(r, '"')
 
-			if bytes.Count(v, []byte{'\\'}) > 0 {
-				v = bytes.ReplaceAll(v, []byte{'\\'}, []byte{'\\', '\\'})
+			// Encode the string to be valid JSON
+			for _, b := range v {
+				if b == '"' {
+					r = append(r, []byte{'\\', '"'}...)
+					continue
+				}
+				if b == '\\' {
+					r = append(r, []byte{'\\', '\\'}...)
+					continue
+				}
+
+				if b >= '\u0000' && b <= '\u001F' {
+					r = append(r, []byte{'\\', 'u', '0', '0'}...)
+					r = append(r, hex[b>>4])
+					r = append(r, hex[b&0xF])
+					continue
+				}
+
+				r = append(r, b)
 			}
 
-			if bytes.Count(v, []byte{'"'}) > 0 {
-				v = bytes.ReplaceAll(v, []byte{'"'}, []byte{'\\', '"'})
-			}
-
-			r = append(r, v...)
 			r = append(r, '"')
 		}
 
