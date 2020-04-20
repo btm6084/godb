@@ -65,6 +65,16 @@ func (s *SQLiteDatastore) Fetch(query string, container interface{}, args ...int
 	return err
 }
 
+// FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (s *SQLiteDatastore) FetchJSON(query string, args ...interface{}) ([]byte, error) {
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return ToJSON(rows)
+}
+
 // Query provides a simple query operation. You will receive the raw sql.Rows object.
 func (s *SQLiteDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return s.db.Query(query, args...)

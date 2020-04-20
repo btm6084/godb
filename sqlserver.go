@@ -87,6 +87,16 @@ func (m *MSSQLDatastore) Fetch(query string, container interface{}, args ...inte
 	return err
 }
 
+// FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (m *MSSQLDatastore) FetchJSON(query string, args ...interface{}) ([]byte, error) {
+	rows, err := m.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return ToJSON(rows)
+}
+
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (m *MSSQLDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {

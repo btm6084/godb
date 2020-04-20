@@ -9,6 +9,7 @@ type Database interface {
 	Ping() error
 	Shutdown() error
 	Fetch(string, interface{}, ...interface{}) error
+	FetchJSON(string, ...interface{}) ([]byte, error)
 	Exec(string, ...interface{}) (sql.Result, error)
 	Query(string, ...interface{}) (*sql.Rows, error)
 }

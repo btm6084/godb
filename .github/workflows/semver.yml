@@ -1,0 +1,39 @@
+name: SemVer
+
+# On push to master, increment the patch number. Major and Minor can be incremented
+# manually.
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+    - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+
+    - name: Increment the patch version on merge.
+      run: |
+        cd $GITHUB_WORKSPACE
+        tag=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null) || true
+
+        if [ -z "$tag" ]
+        then
+          tag=0.0.0
+        fi
+
+        head=`git rev-parse HEAD`
+        tagHead=`git rev-parse $tag 2>/dev/null || true`
+        tagNoV=`grep -o "[0-9]\+[.][0-9]\+[.][0-9]\+" <<< $tag`
+
+        major=$(echo $tagNoV | cut -f1 -d'.')
+        minor=$(echo $tagNoV | cut -f2 -d'.')
+        patch=$(echo $tagNoV | cut -f3 -d'.')
+
+        if [ "$tagHead" != "$head" ]
+        then
+          git tag "v$major.$minor.$(($patch+1))"
+          git push origin --tags
+        fi
