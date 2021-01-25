@@ -55,12 +55,18 @@ func NewMSSQLDatastoreCS(connectString string) *MSSQLDatastore {
 
 // Ping sends a ping to the server and returns an error if it cannot connect.
 func (m *MSSQLDatastore) Ping() error {
+	if m.db == nil {
+		return fmt.Errorf("no valid database")
+	}
+
 	var result []string
 	rows, err := m.db.Query("select getdate()")
 	if err != nil {
 		return err
 	}
+
 	defer rows.Close()
+
 	Unmarshal(rows, &result)
 
 	if len(result) < 1 {
@@ -72,16 +78,26 @@ func (m *MSSQLDatastore) Ping() error {
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
 func (m *MSSQLDatastore) Shutdown() error {
+	if m.db == nil {
+		return fmt.Errorf("no valid database")
+	}
+
 	m.db.Close()
 	return nil
 }
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
 func (m *MSSQLDatastore) Fetch(query string, container interface{}, args ...interface{}) error {
+	if m.db == nil {
+		return fmt.Errorf("no valid database")
+	}
+
 	rows, err := m.db.Query(query, args...)
 	if err != nil {
 		return err
 	}
+
+	defer rows.Close()
 
 	err = Unmarshal(rows, &container)
 	return err
@@ -89,10 +105,16 @@ func (m *MSSQLDatastore) Fetch(query string, container interface{}, args ...inte
 
 // FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
 func (m *MSSQLDatastore) FetchJSON(query string, args ...interface{}) ([]byte, error) {
+	if m.db == nil {
+		return nil, fmt.Errorf("no valid database")
+	}
+
 	rows, err := m.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	return ToJSON(rows)
 }
@@ -100,10 +122,18 @@ func (m *MSSQLDatastore) FetchJSON(query string, args ...interface{}) ([]byte, e
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (m *MSSQLDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {
+	if m.db == nil {
+		return nil, fmt.Errorf("no valid database")
+	}
+
 	return m.db.Exec(query, args...)
 }
 
 // Query provides a simple query operation. You will receive the raw sql.Rows object.
 func (m *MSSQLDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	if m.db == nil {
+		return nil, fmt.Errorf("no valid database")
+	}
+
 	return m.db.Query(query, args...)
 }
