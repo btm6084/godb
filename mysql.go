@@ -1,6 +1,7 @@
 package godb
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"database/sql"
 
 	// Causes side effects in database/sql and allows us to connect to postgres.
+	"github.com/btm6084/utilities/metrics"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -17,22 +19,25 @@ type MySQLDatastore struct {
 }
 
 // NewMySQLDatastore configures and returns a usable MySQLDatastore from parameters.
-func NewMySQLDatastore(user, pass, dbName, host, port string) *MySQLDatastore {
-	return NewMySQLDatastoreCS(fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, dbName))
+func NewMySQLDatastore(user, pass, dbName, host, port string, maxOpen, maxIdle int) *MySQLDatastore {
+	return NewMySQLDatastoreCS(fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, dbName), maxOpen, maxIdle)
 
 }
 
 // NewMySQLDatastoreCS configures and returns a usable MySQLDatastore from a connect string.
-func NewMySQLDatastoreCS(connectString string) *MySQLDatastore {
+func NewMySQLDatastoreCS(connectString string, maxOpen, maxIdle int) *MySQLDatastore {
 	db, err := sql.Open("mysql", connectString)
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+
 	store := &MySQLDatastore{db}
 
-	err = store.Ping()
+	err = store.Ping(context.Background())
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -42,19 +47,20 @@ func NewMySQLDatastoreCS(connectString string) *MySQLDatastore {
 }
 
 // Ping sends a ping to the server and returns an error if it cannot connect.
-func (p *MySQLDatastore) Ping() error {
-	if p.db == nil {
-		return fmt.Errorf("no valid database")
+func (m *MySQLDatastore) Ping(ctx context.Context) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
 	}
 
 	var result []string
-	rows, err := p.db.Query("SELECT VERSION()")
+	rows, err := m.db.QueryContext(ctx, "SELECT VERSION()")
 	if err != nil {
 		return err
 	}
 
 	defer rows.Close()
-
 	Unmarshal(rows, &result)
 
 	if len(result) < 1 {
@@ -65,39 +71,65 @@ func (p *MySQLDatastore) Ping() error {
 }
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
-func (p *MySQLDatastore) Shutdown() error {
-	if p.db == nil {
+func (m *MySQLDatastore) Shutdown(context.Context) error {
+	if m.db == nil {
 		return fmt.Errorf("no valid database")
 	}
 
-	p.db.Close()
+	m.db.Close()
 	return nil
 }
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
-func (p *MySQLDatastore) Fetch(query string, container interface{}, args ...interface{}) error {
-	if p.db == nil {
-		return fmt.Errorf("no valid database")
+func (m *MySQLDatastore) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
 	}
 
-	rows, err := p.db.Query(query, args...)
+	rows, err := m.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+	err = Unmarshal(rows, &container)
+	return err
+}
+
+// FetchWithMetrics provides a simple query-and-get operation. We will run your query and fill your container.
+func (m *MySQLDatastore) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("mysql", query, args...)
+	rows, err := m.db.QueryContext(ctx, query, args...)
+	end()
 	if err != nil {
 		return err
 	}
 
 	defer rows.Close()
 
-	err = Unmarshal(rows, &container)
+	end = r.Segment("GODB::FetchWithMetrics::UnmarshalWithMetrics")
+	err = UnmarshalWithMetrics(r, rows, &container)
+	end()
 	return err
 }
 
 // FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
-func (p *MySQLDatastore) FetchJSON(query string, args ...interface{}) ([]byte, error) {
-	if p.db == nil {
-		return nil, fmt.Errorf("no valid database")
+func (m *MySQLDatastore) FetchJSON(ctx context.Context, query string, args ...interface{}) ([]byte, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
 	}
 
-	rows, err := p.db.Query(query, args...)
+	rows, err := m.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,21 +139,54 @@ func (p *MySQLDatastore) FetchJSON(query string, args ...interface{}) ([]byte, e
 	return ToJSON(rows)
 }
 
-// Query provides a simple query operation. You will receive the raw sql.Rows object.
-func (p *MySQLDatastore) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	if p.db == nil {
-		return nil, fmt.Errorf("no valid database")
+// FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (m *MySQLDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) ([]byte, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
 	}
 
-	return p.db.Query(query, args...)
+	end := r.DatabaseSegment("mysql", query, args...)
+	rows, err := m.db.QueryContext(ctx, query, args...)
+	end()
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	end = r.Segment("GODB::FetchWithMetrics::FetchJSONWithMetrics")
+	j, err := ToJSON(rows)
+	end()
+
+	return j, err
 }
 
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
-func (p *MySQLDatastore) Exec(query string, args ...interface{}) (sql.Result, error) {
-	if p.db == nil {
-		return nil, fmt.Errorf("no valid database")
+func (m *MySQLDatastore) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
 	}
 
-	return p.db.Exec(query, args...)
+	return m.db.ExecContext(ctx, query, args...)
+}
+
+// ExecWithMetrics provides a simple no-return-expected query. We will run your query and send you on your way.
+// Great for inserts and updates.
+func (m *MySQLDatastore) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("mysql", query, args...)
+	res, err := m.db.ExecContext(ctx, query, args...)
+	end()
+
+	return res, err
 }

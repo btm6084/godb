@@ -12,7 +12,7 @@ var hex = "0123456789abcdef"
 // ToJSON extracts a given SQL Rows result as json.
 func ToJSON(rows *sql.Rows) ([]byte, error) {
 	if rows == nil {
-		return nil, errors.New("Empty result set")
+		return nil, errors.New("empty result set")
 	}
 
 	defer rows.Close()
