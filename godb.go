@@ -24,11 +24,13 @@ var (
 	_ Fetcher = (*PostgresDatastore)(nil)
 	_ Fetcher = (*MSSQLDatastore)(nil)
 	_ Fetcher = (*SQLiteDatastore)(nil)
+	_ Fetcher = (*JSONApi)(nil)
 
 	_ JSONFetcher = (*MySQLDatastore)(nil)
 	_ JSONFetcher = (*PostgresDatastore)(nil)
 	_ JSONFetcher = (*MSSQLDatastore)(nil)
 	_ JSONFetcher = (*SQLiteDatastore)(nil)
+	_ JSONFetcher = (*JSONApi)(nil)
 
 	_ Executer = (*MySQLDatastore)(nil)
 	_ Executer = (*PostgresDatastore)(nil)
