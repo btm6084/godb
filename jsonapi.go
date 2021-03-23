@@ -51,9 +51,13 @@ func NewJSONApi(baseURL, pingPath string, requestTimeout time.Duration) *JSONApi
 	return fetcher
 }
 
-func (h *JSONApi) requestURL(path string) string {
+func (j *JSONApi) requestURL(path string) string {
+	if j == nil {
+		return ""
+	}
+
 	return strings.Join([]string{
-		strings.TrimRight(h.baseURL, "/"),
+		strings.TrimRight(j.baseURL, "/"),
 		strings.TrimLeft(path, "/"),
 	}, "/")
 }
@@ -81,8 +85,12 @@ func readResponse(res *http.Response) ([]byte, error) {
 }
 
 // Ping sends a ping to the server and returns an error if it cannot connect.
-func (h *JSONApi) Ping(ctx context.Context) error {
-	res, err := h.client.Get(h.requestURL(h.pingPath))
+func (j *JSONApi) Ping(ctx context.Context) error {
+	if j == nil {
+		return ErrEmptyObject
+	}
+
+	res, err := j.client.Get(j.requestURL(j.pingPath))
 	if err != nil {
 		return err
 	}
@@ -97,17 +105,25 @@ func (h *JSONApi) Ping(ctx context.Context) error {
 // FetchJSON makes a request to baseURL/requestURI.
 // RequestURI should be the full relative path + query string.
 // Any args passed in will be passed to fmt.Sprintf(requestURI, args...)
-func (h *JSONApi) FetchJSON(ctx context.Context, requestURI string, args ...interface{}) ([]byte, error) {
-	return h.FetchJSONWithMetrics(ctx, &metrics.NoOp{}, requestURI, args...)
+func (j *JSONApi) FetchJSON(ctx context.Context, requestURI string, args ...interface{}) ([]byte, error) {
+	if j == nil {
+		return nil, ErrEmptyObject
+	}
+
+	return j.FetchJSONWithMetrics(ctx, &metrics.NoOp{}, requestURI, args...)
 }
 
 // FetchJSONWithMetrics makes a request to baseURL/requestURI.
 // RequestURI should be the full relative path + query string.
 // Any args passed in will be passed to fmt.Sprintf(requestURI, args...)
-func (h *JSONApi) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, requestURI string, args ...interface{}) ([]byte, error) {
-	r.SetDBMeta(h.baseURL, stripQueryRE.FindString(requestURI), "GET")
+func (j *JSONApi) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, requestURI string, args ...interface{}) ([]byte, error) {
+	if j == nil {
+		return nil, ErrEmptyObject
+	}
 
-	href := h.requestURL(fmt.Sprintf(requestURI, args...))
+	r.SetDBMeta(j.baseURL, stripQueryRE.FindString(requestURI), "GET")
+
+	href := j.requestURL(fmt.Sprintf(requestURI, args...))
 
 	req, err := http.NewRequest("GET", href, nil)
 	if err != nil {
@@ -117,8 +133,8 @@ func (h *JSONApi) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	end := r.DatabaseSegment(h.baseURL, requestURI, args...)
-	res, err := h.client.Do(req)
+	end := r.DatabaseSegment(j.baseURL, requestURI, args...)
+	res, err := j.client.Do(req)
 	end()
 	if err != nil {
 		return nil, err
@@ -135,15 +151,23 @@ func (h *JSONApi) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, 
 // Fetch makes a request to baseURL/requestURI.
 // RequestURI should be the full relative path + query string.
 // Any args passed in will be passed to fmt.Sprintf(requestURI, args...)
-func (h *JSONApi) Fetch(ctx context.Context, requestURI string, container interface{}, args ...interface{}) error {
-	return h.FetchWithMetrics(ctx, &metrics.NoOp{}, requestURI, container, args...)
+func (j *JSONApi) Fetch(ctx context.Context, requestURI string, container interface{}, args ...interface{}) error {
+	if j == nil {
+		return ErrEmptyObject
+	}
+
+	return j.FetchWithMetrics(ctx, &metrics.NoOp{}, requestURI, container, args...)
 }
 
 // Fetch makes a request to baseURL/requestURI.
 // RequestURI should be the full relative path + query string.
 // Any args passed in will be passed to fmt.Sprintf(requestURI, args...)
-func (h *JSONApi) FetchWithMetrics(ctx context.Context, r metrics.Recorder, requestURI string, container interface{}, args ...interface{}) error {
-	b, err := h.FetchJSONWithMetrics(ctx, r, requestURI, args...)
+func (j *JSONApi) FetchWithMetrics(ctx context.Context, r metrics.Recorder, requestURI string, container interface{}, args ...interface{}) error {
+	if j == nil {
+		return ErrEmptyObject
+	}
+
+	b, err := j.FetchJSONWithMetrics(ctx, r, requestURI, args...)
 	if err != nil {
 		return err
 	}

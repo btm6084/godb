@@ -42,6 +42,10 @@ func NewSQLiteDatastore(file string, maxOpen, maxIdle int) *SQLiteDatastore {
 
 // Ping sends a ping to the server and returns an error if it cannot connect.
 func (s *SQLiteDatastore) Ping(ctx context.Context) error {
+	if s == nil {
+		return ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -76,6 +80,10 @@ func (s *SQLiteDatastore) Shutdown(context.Context) error {
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
 func (s *SQLiteDatastore) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
+	if s == nil {
+		return ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -94,6 +102,10 @@ func (s *SQLiteDatastore) Fetch(ctx context.Context, query string, container int
 
 // FetchWithMetrics provides a simple query-and-get operation. We will run your query and fill your container.
 func (s *SQLiteDatastore) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
+	if s == nil {
+		return ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -117,6 +129,10 @@ func (s *SQLiteDatastore) FetchWithMetrics(ctx context.Context, r metrics.Record
 
 // FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
 func (s *SQLiteDatastore) FetchJSON(ctx context.Context, query string, args ...interface{}) ([]byte, error) {
+	if s == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -135,6 +151,10 @@ func (s *SQLiteDatastore) FetchJSON(ctx context.Context, query string, args ...i
 
 // FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
 func (s *SQLiteDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) ([]byte, error) {
+	if s == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -160,6 +180,10 @@ func (s *SQLiteDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.Re
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (s *SQLiteDatastore) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	if s == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -172,6 +196,10 @@ func (s *SQLiteDatastore) Exec(ctx context.Context, query string, args ...interf
 // ExecWithMetrics provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (s *SQLiteDatastore) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
+	if s == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)

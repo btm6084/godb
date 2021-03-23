@@ -48,6 +48,10 @@ func NewPostgresDatastoreCS(connectString string, maxOpen, maxIdle int) *Postgre
 
 // Ping sends a ping to the server and returns an error if it cannot connect.
 func (p *PostgresDatastore) Ping(ctx context.Context) error {
+	if p == nil {
+		return ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -80,6 +84,10 @@ func (p *PostgresDatastore) Shutdown(context.Context) error {
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
 func (p *PostgresDatastore) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
+	if p == nil {
+		return ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -98,6 +106,10 @@ func (p *PostgresDatastore) Fetch(ctx context.Context, query string, container i
 
 // FetchWithMetrics provides a simple query-and-get operation. We will run your query and fill your container.
 func (p *PostgresDatastore) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
+	if p == nil {
+		return ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -121,6 +133,10 @@ func (p *PostgresDatastore) FetchWithMetrics(ctx context.Context, r metrics.Reco
 
 // FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
 func (p *PostgresDatastore) FetchJSON(ctx context.Context, query string, args ...interface{}) ([]byte, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -139,6 +155,10 @@ func (p *PostgresDatastore) FetchJSON(ctx context.Context, query string, args ..
 
 // FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
 func (p *PostgresDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) ([]byte, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -164,6 +184,10 @@ func (p *PostgresDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (p *PostgresDatastore) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -176,6 +200,10 @@ func (p *PostgresDatastore) Exec(ctx context.Context, query string, args ...inte
 // ExecWithMetrics provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (p *PostgresDatastore) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)

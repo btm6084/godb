@@ -3,6 +3,7 @@ package godb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -42,6 +43,8 @@ var (
 	// QueryLimit is a hard timeout on the amount of time a query is allowed to run.
 	// QueryLimit is exported so that an application can adjust it to fit their needs.
 	QueryLimit = 5 * time.Minute
+
+	ErrEmptyObject = errors.New("godb empty object")
 )
 
 // Database implements an interface for interacting with a database.
