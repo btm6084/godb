@@ -3,6 +3,7 @@ package godb
 import (
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 
 var (
 	stripQueryRE = regexp.MustCompile(`^[^?]+`)
+	ErrNotFound  = errors.New("not found")
 )
 
 // JSONApi is an implementation of the Fetcher and JSONFetcher interfaces()
@@ -138,6 +140,16 @@ func (j *JSONApi) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, 
 	end()
 	if err != nil {
 		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusNotFound {
+		return nil, ErrNotFound
+	}
+
+	if res.StatusCode/100 > 3 {
+		return nil, fmt.Errorf("godb.JSONApi: invalid status code %d (%s)", res.StatusCode, res.Status)
 	}
 
 	b, err := readResponse(res)
