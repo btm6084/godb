@@ -2,14 +2,15 @@ package godb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
-	"database/sql"
+	"github.com/btm6084/utilities/metrics"
+	"github.com/btm6084/utilities/stack"
+	log "github.com/sirupsen/logrus"
 
 	// Causes side effects in database/sql and allows us to connect to postgres.
-	"github.com/btm6084/utilities/metrics"
 	_ "github.com/lib/pq"
 )
 
@@ -28,7 +29,7 @@ func NewPostgresDatastore(user, pass, dbName, host, port string, maxOpen, maxIdl
 func NewPostgresDatastoreCS(connectString string, maxOpen, maxIdle int) *PostgresDatastore {
 	db, err := sql.Open("postgres", connectString)
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -39,7 +40,7 @@ func NewPostgresDatastoreCS(connectString string, maxOpen, maxIdle int) *Postgre
 
 	err = store.Ping(context.Background())
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -76,7 +77,7 @@ func (p *PostgresDatastore) Ping(ctx context.Context) error {
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
 func (p *PostgresDatastore) Shutdown(context.Context) error {
-	if p.db != nil {
+	if p != nil && p.db != nil {
 		p.db.Close()
 	}
 	return nil

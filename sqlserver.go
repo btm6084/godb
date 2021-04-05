@@ -8,8 +8,10 @@ import (
 	"net/url"
 	"strings"
 
-	// Causes side effects in database/sql and allows us to connect to sqlserver.
 	"github.com/btm6084/utilities/metrics"
+	"github.com/btm6084/utilities/stack"
+
+	// Causes side effects in database/sql and allows us to connect to sqlserver.
 	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/sirupsen/logrus"
 )
@@ -41,7 +43,7 @@ func NewMSSQLDatastoreCS(connectString string, maxOpen, maxIdle int) *MSSQLDatas
 	connectString = strings.ReplaceAll(connectString, "\n", "")
 	db, err := sql.Open("sqlserver", connectString)
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -52,7 +54,7 @@ func NewMSSQLDatastoreCS(connectString string, maxOpen, maxIdle int) *MSSQLDatas
 
 	err = store.Ping(context.Background())
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -89,7 +91,7 @@ func (m *MSSQLDatastore) Ping(ctx context.Context) error {
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
 func (m *MSSQLDatastore) Shutdown(context.Context) error {
-	if m.db != nil {
+	if m != nil && m.db != nil {
 		m.db.Close()
 	}
 	return nil

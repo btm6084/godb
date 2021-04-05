@@ -2,14 +2,15 @@ package godb
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
-	"database/sql"
+	"github.com/btm6084/utilities/metrics"
+	"github.com/btm6084/utilities/stack"
+	log "github.com/sirupsen/logrus"
 
 	// Causes side effects in database/sql and allows us to connect to sqlserver.
-	"github.com/btm6084/utilities/metrics"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -22,7 +23,7 @@ type SQLiteDatastore struct {
 func NewSQLiteDatastore(file string, maxOpen, maxIdle int) *SQLiteDatastore {
 	db, err := sql.Open("sqlite3", file)
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -33,7 +34,7 @@ func NewSQLiteDatastore(file string, maxOpen, maxIdle int) *SQLiteDatastore {
 
 	err = store.Ping(context.Background())
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -70,7 +71,7 @@ func (s *SQLiteDatastore) Ping(ctx context.Context) error {
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
 func (s *SQLiteDatastore) Shutdown(context.Context) error {
-	if s.db == nil {
+	if s != nil && s.db == nil {
 		return fmt.Errorf("no valid database")
 	}
 

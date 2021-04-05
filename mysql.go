@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"database/sql"
 
-	// Causes side effects in database/sql and allows us to connect to postgres.
 	"github.com/btm6084/utilities/metrics"
+	"github.com/btm6084/utilities/stack"
+	log "github.com/sirupsen/logrus"
+
+	// Causes side effects in database/sql and allows us to connect to mysql
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -28,7 +30,7 @@ func NewMySQLDatastore(user, pass, dbName, host, port string, maxOpen, maxIdle i
 func NewMySQLDatastoreCS(connectString string, maxOpen, maxIdle int) *MySQLDatastore {
 	db, err := sql.Open("mysql", connectString)
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -39,7 +41,7 @@ func NewMySQLDatastoreCS(connectString string, maxOpen, maxIdle int) *MySQLDatas
 
 	err = store.Ping(context.Background())
 	if err != nil {
-		log.Println(err)
+		log.WithFields(stack.TraceFields()).Println(err)
 		return nil
 	}
 
@@ -76,7 +78,7 @@ func (m *MySQLDatastore) Ping(ctx context.Context) error {
 
 // Shutdown performs any closing operations. Best called as deferred from main after the datastore is initialized.
 func (m *MySQLDatastore) Shutdown(context.Context) error {
-	if m == nil {
+	if m != nil && m == nil {
 		return ErrEmptyObject
 	}
 
