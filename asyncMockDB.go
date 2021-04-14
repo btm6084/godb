@@ -4,14 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/btm6084/gojson"
-	"github.com/stretchr/testify/assert"
 	"github.com/btm6084/utilities/metrics"
+	"github.com/stretchr/testify/assert"
 )
 
 var _ Database = &AsyncMockDB{}
+var spaces = regexp.MustCompile(`\s\s+`)
 
 // AsyncMockDB implements the Database interface and allows for database mocking.
 // AsyncMockDB checks THAT a query executes, but does not say that it happens in any order.
@@ -74,10 +77,13 @@ func (db *AsyncMockDB) Fetch(ctx context.Context, q string, c interface{}, args 
 		db.t.FailNow()
 	}
 
+	q = transformQuery(q)
+
 	var fetch DBResult
-	for _, f := range db.Expected {
-		if f.Query == q {
-			fetch = f
+	for k := range db.Expected {
+		db.Expected[k].Query = transformQuery(db.Expected[k].Query)
+		if db.Expected[k].Query == q {
+			fetch = db.Expected[k]
 			break
 		}
 	}
@@ -96,6 +102,14 @@ func (db *AsyncMockDB) Fetch(ctx context.Context, q string, c interface{}, args 
 	assert.Nil(db.t, err)
 
 	return nil
+}
+
+func transformQuery(in string) string {
+	in = strings.ReplaceAll(in, "\n", " ")
+	in = strings.ReplaceAll(in, "\t", " ")
+	in = spaces.ReplaceAllString(in, " ")
+	in = strings.TrimSpace(in)
+	return in
 }
 
 // ExecWithMetrics mocks ExecWithMetrics by simply ignoring the metrics during the unittest.
@@ -119,10 +133,13 @@ func (db *AsyncMockDB) Exec(ctx context.Context, q string, args ...interface{}) 
 		db.t.FailNow()
 	}
 
+	q = transformQuery(q)
+
 	var exec DBResult
-	for _, e := range db.Expected {
-		if e.Query == q {
-			exec = e
+	for k := range db.Expected {
+		db.Expected[k].Query = transformQuery(db.Expected[k].Query)
+		if db.Expected[k].Query == q {
+			exec = db.Expected[k]
 			break
 		}
 	}
