@@ -16,6 +16,9 @@ import (
 
 // Interface Assertions
 var (
+	_ TransactionDB = (*PostgresDatastore)(nil)
+	_ Transaction   = (*PostgresTx)(nil)
+
 	_ Database = (*MySQLDatastore)(nil)
 	_ Database = (*PostgresDatastore)(nil)
 	_ Database = (*MSSQLDatastore)(nil)
@@ -55,6 +58,20 @@ type Database interface {
 	executer
 	fetcher
 	jsonFetcher
+}
+
+type TransactionDB interface {
+	BeginTx(context.Context) (Transaction, error)
+
+	Database
+}
+
+type Transaction interface {
+	Commit() error
+	Rollback() error
+
+	fetcher
+	executer
 }
 
 type Fetcher interface {

@@ -83,6 +83,19 @@ func (p *PostgresDatastore) Shutdown(context.Context) error {
 	return nil
 }
 
+// Begin starts a single transaction. You MUST call Transaction.Rollback, or Transaction.Commit after calling Begin, or you WILL
+// leak memory.
+// It is safe to defer Transaction.Rollback immediately, even if you don't intend to rollback.
+// Once you Commit, Rollback becomes a no-op.
+func (p *PostgresDatastore) BeginTx(ctx context.Context) (Transaction, error) {
+	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &PostgresTx{db: p.db, tx: tx}, nil
+}
+
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
 func (p *PostgresDatastore) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
 	if p == nil {
@@ -216,4 +229,78 @@ func (p *PostgresDatastore) ExecWithMetrics(ctx context.Context, r metrics.Recor
 	end()
 
 	return res, err
+}
+
+// PostgresTx implements the Transaction interface.
+type PostgresTx struct {
+	db *sql.DB
+	tx *sql.Tx
+}
+
+// Fetch provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
+func (p *PostgresTx) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
+	return p.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)
+}
+
+// FetchWithMetrics provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
+func (p *PostgresTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
+	if p == nil {
+		return ErrEmptyObject
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("postgres", query, args...)
+	rows, err := p.tx.QueryContext(ctx, query, args...)
+	end()
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	end = r.Segment("GODB::FetchWithMetrics::UnmarshalWithMetrics")
+	err = UnmarshalWithMetrics(r, rows, &container)
+	end()
+	return err
+}
+
+// Exec provides a simple no-return-expected query as part of a transaction. We will run your query and send you on your way.
+// Great for inserts and updates.
+func (p *PostgresTx) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return p.ExecWithMetrics(ctx, &metrics.NoOp{}, query, args...)
+}
+
+// ExecWithMetrics provides a simple no-return-expected query as part of a transaction. We will run your query and send you on your way.
+// Great for inserts and updates.
+func (p *PostgresTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("postgres", query, args...)
+	res, err := p.tx.ExecContext(ctx, query, args...)
+	end()
+
+	return res, err
+}
+
+// Commit commits the transaction
+func (p *PostgresTx) Commit() error {
+	return p.tx.Commit()
+}
+
+// Rollback commits the transaction
+func (p *PostgresTx) Rollback() error {
+	return p.tx.Rollback()
 }
