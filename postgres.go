@@ -62,6 +62,10 @@ func (p *PostgresDatastore) Ping(ctx context.Context) error {
 	var result []string
 	rows, err := p.db.QueryContext(ctx, "select now()")
 	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
 		return err
 	}
 
@@ -110,6 +114,10 @@ func (p *PostgresDatastore) Fetch(ctx context.Context, query string, container i
 
 	rows, err := p.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
 		return err
 	}
 
@@ -134,6 +142,10 @@ func (p *PostgresDatastore) FetchWithMetrics(ctx context.Context, r metrics.Reco
 	rows, err := p.db.QueryContext(ctx, query, args...)
 	end()
 	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
 		return err
 	}
 
@@ -159,6 +171,10 @@ func (p *PostgresDatastore) FetchJSON(ctx context.Context, query string, args ..
 
 	rows, err := p.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return nil, fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
 		return nil, err
 	}
 
@@ -183,6 +199,10 @@ func (p *PostgresDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.
 	rows, err := p.db.QueryContext(ctx, query, args...)
 	end()
 	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return nil, fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
 		return nil, err
 	}
 
@@ -198,17 +218,7 @@ func (p *PostgresDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.
 // Exec provides a simple no-return-expected query. We will run your query and send you on your way.
 // Great for inserts and updates.
 func (p *PostgresDatastore) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	if p == nil {
-		return nil, ErrEmptyObject
-	}
-
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
-		defer cancel()
-	}
-
-	return p.db.ExecContext(ctx, query, args...)
+	return p.ExecWithMetrics(ctx, &metrics.NoOp{}, query, args...)
 }
 
 // ExecWithMetrics provides a simple no-return-expected query. We will run your query and send you on your way.
@@ -228,7 +238,15 @@ func (p *PostgresDatastore) ExecWithMetrics(ctx context.Context, r metrics.Recor
 	res, err := p.db.ExecContext(ctx, query, args...)
 	end()
 
-	return res, err
+	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return nil, fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // PostgresTx implements the Transaction interface.
@@ -258,6 +276,10 @@ func (p *PostgresTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, q
 	rows, err := p.tx.QueryContext(ctx, query, args...)
 	end()
 	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
 		return err
 	}
 
@@ -292,7 +314,15 @@ func (p *PostgresTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, qu
 	res, err := p.tx.ExecContext(ctx, query, args...)
 	end()
 
-	return res, err
+	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return nil, fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // Commit commits the transaction
