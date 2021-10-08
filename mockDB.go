@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/btm6084/gojson"
-	"github.com/stretchr/testify/assert"
 	"github.com/btm6084/utilities/metrics"
+	"github.com/stretchr/testify/assert"
 )
 
 var _ Database = &MockDB{}
@@ -75,6 +75,11 @@ func (db *MockDB) Ping(context.Context) error {
 // Shutdown satisfies the Database interface.
 func (db *MockDB) Shutdown(context.Context) error {
 	return nil
+}
+
+// Stats satisfies the Database interface.
+func (db *MockDB) Stats(context.Context) sql.DBStats {
+	return sql.DBStats{}
 }
 
 // FetchWithMetrics mocks FetchWithMetrics by simply ignoring the metrics during the unittest.
