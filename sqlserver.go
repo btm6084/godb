@@ -67,6 +67,10 @@ func (m *MSSQLDatastore) Ping(ctx context.Context) error {
 		return ErrEmptyObject
 	}
 
+	// This will choose the default recorder chosen during setup. If metrics.MetricsRecorder is never changed,
+	// this will default to the noop recorder.
+	r := metrics.GetRecorder(ctx)
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -74,7 +78,9 @@ func (m *MSSQLDatastore) Ping(ctx context.Context) error {
 	}
 
 	var result []string
+	end := r.DatabaseSegment("mssql", "select getdate()")
 	rows, err := m.db.QueryContext(ctx, "select getdate()")
+	end()
 	if err != nil {
 		return err
 	}
@@ -97,26 +103,17 @@ func (m *MSSQLDatastore) Shutdown(context.Context) error {
 	return nil
 }
 
+// Stats returns statistics about the current DB connection.
+func (m *MSSQLDatastore) Stats(context.Context) sql.DBStats {
+	if m != nil && m.db != nil {
+		return m.db.Stats()
+	}
+	return sql.DBStats{}
+}
+
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
 func (m *MSSQLDatastore) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
-	if m == nil {
-		return ErrEmptyObject
-	}
-
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
-		defer cancel()
-	}
-
-	rows, err := m.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
-	defer rows.Close()
-	err = Unmarshal(rows, &container)
-	return err
+	return m.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)
 }
 
 // FetchWithMetrics provides a simple query-and-get operation. We will run your query and fill your container.

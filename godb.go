@@ -58,6 +58,7 @@ type Database interface {
 	executer
 	fetcher
 	jsonFetcher
+	stats
 }
 
 type TransactionDB interface {
@@ -106,6 +107,10 @@ type executer interface {
 
 type pinger interface {
 	Ping(context.Context) error
+}
+
+type stats interface {
+	Stats(context.Context) sql.DBStats
 }
 
 func assertDeepEqual(t *testing.T, a, b interface{}) bool {

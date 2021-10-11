@@ -53,8 +53,14 @@ func (s *SQLiteDatastore) Ping(ctx context.Context) error {
 		defer cancel()
 	}
 
+	// This will choose the default recorder chosen during setup. If metrics.MetricsRecorder is never changed,
+	// this will default to the noop recorder.
+	r := metrics.GetRecorder(ctx)
+
 	var result []string
+	end := r.DatabaseSegment("mssql", "SELECT strftime('%s', 'now');")
 	rows, err := s.db.QueryContext(ctx, "SELECT strftime('%s', 'now');")
+	end()
 	if err != nil {
 		return err
 	}
@@ -77,6 +83,14 @@ func (s *SQLiteDatastore) Shutdown(context.Context) error {
 
 	s.db.Close()
 	return nil
+}
+
+// Stats returns statistics about the current DB connection.
+func (s *SQLiteDatastore) Stats(context.Context) sql.DBStats {
+	if s != nil && s.db != nil {
+		return s.db.Stats()
+	}
+	return sql.DBStats{}
 }
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.

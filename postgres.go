@@ -53,6 +53,10 @@ func (p *PostgresDatastore) Ping(ctx context.Context) error {
 		return ErrEmptyObject
 	}
 
+	// This will choose the default recorder chosen during setup. If metrics.MetricsRecorder is never changed,
+	// this will default to the noop recorder.
+	r := metrics.GetRecorder(ctx)
+
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
@@ -60,7 +64,9 @@ func (p *PostgresDatastore) Ping(ctx context.Context) error {
 	}
 
 	var result []string
+	end := r.DatabaseSegment("mssql", "select now()")
 	rows, err := p.db.QueryContext(ctx, "select now()")
+	end()
 	if err != nil {
 		if err.Error() == "pq: canceling statement due to user request" {
 			return fmt.Errorf("%w: %v", ctx.Err(), err)
@@ -85,6 +91,14 @@ func (p *PostgresDatastore) Shutdown(context.Context) error {
 		p.db.Close()
 	}
 	return nil
+}
+
+// Stats returns statistics about the current DB connection.
+func (p *PostgresDatastore) Stats(context.Context) sql.DBStats {
+	if p != nil && p.db != nil {
+		return p.db.Stats()
+	}
+	return sql.DBStats{}
 }
 
 // Begin starts a single transaction. You MUST call Transaction.Rollback, or Transaction.Commit after calling Begin, or you WILL

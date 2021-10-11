@@ -60,8 +60,14 @@ func (m *MySQLDatastore) Ping(ctx context.Context) error {
 		defer cancel()
 	}
 
+	// This will choose the default recorder chosen during setup. If metrics.MetricsRecorder is never changed,
+	// this will default to the noop recorder.
+	r := metrics.GetRecorder(ctx)
+
 	var result []string
+	end := r.DatabaseSegment("mssql", "SELECT VERSION()")
 	rows, err := m.db.QueryContext(ctx, "SELECT VERSION()")
+	end()
 	if err != nil {
 		return err
 	}
@@ -88,6 +94,14 @@ func (m *MySQLDatastore) Shutdown(context.Context) error {
 
 	m.db.Close()
 	return nil
+}
+
+// Stats returns statistics about the current DB connection.
+func (m *MySQLDatastore) Stats(context.Context) sql.DBStats {
+	if m != nil && m.db != nil {
+		return m.db.Stats()
+	}
+	return sql.DBStats{}
 }
 
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.

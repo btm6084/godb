@@ -56,6 +56,11 @@ func (db *AsyncMockDB) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// Stats satisfies the Database interface.
+func (db *AsyncMockDB) Stats(context.Context) sql.DBStats {
+	return sql.DBStats{}
+}
+
 // FetchWithMetrics mocks FetchWithMetrics by simply ignoring the metrics during the unittest.
 // This allows FetchWithMetrics to work exactly as Fetch does during a unit test.
 func (db *AsyncMockDB) FetchWithMetrics(ctx context.Context, r metrics.Recorder, q string, c interface{}, args ...interface{}) error {
