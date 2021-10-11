@@ -96,7 +96,7 @@ func (p *PostgresDatastore) Shutdown(context.Context) error {
 // Stats returns statistics about the current DB connection.
 func (p *PostgresDatastore) Stats(context.Context) sql.DBStats {
 	if p != nil && p.db != nil {
-		p.db.Stats()
+		return p.db.Stats()
 	}
 	return sql.DBStats{}
 }

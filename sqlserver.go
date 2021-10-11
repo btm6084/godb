@@ -106,7 +106,7 @@ func (m *MSSQLDatastore) Shutdown(context.Context) error {
 // Stats returns statistics about the current DB connection.
 func (m *MSSQLDatastore) Stats(context.Context) sql.DBStats {
 	if m != nil && m.db != nil {
-		m.db.Stats()
+		return m.db.Stats()
 	}
 	return sql.DBStats{}
 }

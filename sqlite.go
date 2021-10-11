@@ -88,7 +88,7 @@ func (s *SQLiteDatastore) Shutdown(context.Context) error {
 // Stats returns statistics about the current DB connection.
 func (s *SQLiteDatastore) Stats(context.Context) sql.DBStats {
 	if s != nil && s.db != nil {
-		s.db.Stats()
+		return s.db.Stats()
 	}
 	return sql.DBStats{}
 }
