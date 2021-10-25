@@ -54,7 +54,7 @@ var (
 type Database interface {
 	Shutdown(context.Context) error
 
-	pinger
+	Pinger
 	executer
 	fetcher
 	jsonFetcher
@@ -77,17 +77,17 @@ type Transaction interface {
 
 type Fetcher interface {
 	fetcher
-	pinger
+	Pinger
 }
 
 type JSONFetcher interface {
 	jsonFetcher
-	pinger
+	Pinger
 }
 
 type Executer interface {
 	executer
-	pinger
+	Pinger
 }
 
 type fetcher interface {
@@ -105,7 +105,7 @@ type executer interface {
 	ExecWithMetrics(context.Context, metrics.Recorder, string, ...interface{}) (sql.Result, error)
 }
 
-type pinger interface {
+type Pinger interface {
 	Ping(context.Context) error
 }
 
