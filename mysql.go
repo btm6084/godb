@@ -73,7 +73,7 @@ func (m *MySQLDatastore) Ping(ctx context.Context) error {
 	}
 
 	defer rows.Close()
-	Unmarshal(rows, &result)
+	Unmarshal(ctx, rows, &result)
 
 	if len(result) < 1 {
 		return errors.New("Ping Failed")
@@ -122,7 +122,7 @@ func (m *MySQLDatastore) Fetch(ctx context.Context, query string, container inte
 	}
 
 	defer rows.Close()
-	err = Unmarshal(rows, &container)
+	err = Unmarshal(ctx, rows, &container)
 	return err
 }
 
@@ -148,7 +148,7 @@ func (m *MySQLDatastore) FetchWithMetrics(ctx context.Context, r metrics.Recorde
 	defer rows.Close()
 
 	end = r.Segment("GODB::FetchWithMetrics::UnmarshalWithMetrics")
-	err = UnmarshalWithMetrics(r, rows, &container)
+	err = UnmarshalWithMetrics(ctx, r, rows, &container)
 	end()
 	return err
 }
@@ -172,7 +172,7 @@ func (m *MySQLDatastore) FetchJSON(ctx context.Context, query string, args ...in
 
 	defer rows.Close()
 
-	return ToJSON(rows)
+	return ToJSON(ctx, rows)
 }
 
 // FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
@@ -197,7 +197,7 @@ func (m *MySQLDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.Rec
 	defer rows.Close()
 
 	end = r.Segment("GODB::FetchWithMetrics::FetchJSONWithMetrics")
-	j, err := ToJSON(rows)
+	j, err := ToJSON(ctx, rows)
 	end()
 
 	return j, err

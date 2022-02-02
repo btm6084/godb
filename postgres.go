@@ -76,7 +76,7 @@ func (p *PostgresDatastore) Ping(ctx context.Context) error {
 	}
 
 	defer rows.Close()
-	Unmarshal(rows, &result)
+	Unmarshal(ctx, rows, &result)
 
 	if len(result) < 1 {
 		return errors.New("Ping Failed")
@@ -136,7 +136,7 @@ func (p *PostgresDatastore) Fetch(ctx context.Context, query string, container i
 	}
 
 	defer rows.Close()
-	err = Unmarshal(rows, &container)
+	err = Unmarshal(ctx, rows, &container)
 	return err
 }
 
@@ -166,7 +166,7 @@ func (p *PostgresDatastore) FetchWithMetrics(ctx context.Context, r metrics.Reco
 	defer rows.Close()
 
 	end = r.Segment("GODB::FetchWithMetrics::UnmarshalWithMetrics")
-	err = UnmarshalWithMetrics(r, rows, &container)
+	err = UnmarshalWithMetrics(ctx, r, rows, &container)
 	end()
 	return err
 }
@@ -194,7 +194,7 @@ func (p *PostgresDatastore) FetchJSON(ctx context.Context, query string, args ..
 
 	defer rows.Close()
 
-	return ToJSON(rows)
+	return ToJSON(ctx, rows)
 }
 
 // FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
@@ -223,7 +223,7 @@ func (p *PostgresDatastore) FetchJSONWithMetrics(ctx context.Context, r metrics.
 	defer rows.Close()
 
 	end = r.Segment("GODB::FetchWithMetrics::FetchJSONWithMetrics")
-	j, err := ToJSON(rows)
+	j, err := ToJSON(ctx, rows)
 	end()
 
 	return j, err
@@ -300,7 +300,7 @@ func (p *PostgresTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, q
 	defer rows.Close()
 
 	end = r.Segment("GODB::FetchWithMetrics::UnmarshalWithMetrics")
-	err = UnmarshalWithMetrics(r, rows, &container)
+	err = UnmarshalWithMetrics(ctx, r, rows, &container)
 	end()
 	return err
 }

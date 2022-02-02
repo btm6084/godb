@@ -1,6 +1,7 @@
 package godb
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/btm6084/gojson"
@@ -8,8 +9,8 @@ import (
 )
 
 // Unmarshal extracts a given SQL Rows result into a given container.
-func Unmarshal(rows *sql.Rows, v interface{}) error {
-	j, err := ToJSON(rows)
+func Unmarshal(ctx context.Context, rows *sql.Rows, v interface{}) error {
+	j, err := ToJSON(ctx, rows)
 	if err != nil {
 		return err
 	}
@@ -18,9 +19,9 @@ func Unmarshal(rows *sql.Rows, v interface{}) error {
 }
 
 // UnmarshalWithMetrics extracts a given SQL Rows result into a given container.
-func UnmarshalWithMetrics(r metrics.Recorder, rows *sql.Rows, v interface{}) error {
+func UnmarshalWithMetrics(ctx context.Context, r metrics.Recorder, rows *sql.Rows, v interface{}) error {
 	end := r.Segment("GODB::UnmarshalWithMetrics::ToJSON")
-	j, err := ToJSON(rows)
+	j, err := ToJSON(ctx, rows)
 	end()
 	if err != nil {
 		return err

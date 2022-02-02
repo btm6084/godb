@@ -2,6 +2,7 @@ package godb
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"errors"
 
@@ -11,7 +12,21 @@ import (
 var hex = "0123456789abcdef"
 
 // ToJSON extracts a given SQL Rows result as json.
-func ToJSON(rows *sql.Rows) ([]byte, error) {
+func ToJSON(ctx context.Context, rows *sql.Rows) ([]byte, error) {
+	var ctxErr error
+
+	// We need to know if the context ends before we finish reading everything. If it does,
+	// we have an unknown set and thus should consider the whole operation a failure.
+	// Only do this if we have a deadline.
+	go func() {
+		if _, ok := ctx.Deadline(); !ok {
+			return
+		}
+
+		<-ctx.Done()
+		ctxErr = ctx.Err()
+	}()
+
 	if rows == nil {
 		return nil, errors.New("empty result set")
 	}
@@ -33,11 +48,20 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 		scan[i] = &data[i]
 	}
 
-	for i := 0; rows.Next(); i++ {
-		rows.Scan(scan...)
+	i := 0
+	for rows.Next() {
+		err := rows.Scan(scan...)
+		if err != nil {
+			return nil, err
+		}
+
+		if ctxErr != nil {
+			return nil, ctxErr
+		}
 
 		if i == 0 {
 			buf.WriteByte('{')
+			i++
 		} else {
 			buf.WriteString(`,{`)
 		}
@@ -94,6 +118,10 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 	}
 
 	buf.WriteByte(']')
+
+	if ctxErr != nil {
+		return nil, ctxErr
+	}
 
 	return buf.Bytes(), nil
 }
