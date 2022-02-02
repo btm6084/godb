@@ -1,6 +1,7 @@
 package godb
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 
@@ -22,7 +23,8 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 		return nil, err
 	}
 
-	buf := []byte{'['}
+	var buf bytes.Buffer
+	buf.WriteByte('[')
 
 	data := make([]sql.RawBytes, len(cols))
 	scan := make([]interface{}, len(data))
@@ -34,12 +36,10 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 	for i := 0; rows.Next(); i++ {
 		rows.Scan(scan...)
 
-		var r []byte
-
 		if i == 0 {
-			r = []byte{'{'}
+			buf.WriteByte('{')
 		} else {
-			r = []byte{',', '{'}
+			buf.WriteString(`,{`)
 		}
 
 		first := true
@@ -49,52 +49,51 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 			}
 
 			if !first && k < len(data) {
-				r = append(r, ',')
+				buf.WriteByte(',')
 			}
 
 			first = false
 
-			r = append(r, '"')
-			r = append(r, cols[k]...)
-			r = append(r, '"')
-			r = append(r, ':')
+			buf.WriteByte('"')
+			buf.WriteString(cols[k])
+			buf.WriteString(`":`)
 
 			// Don't quote or escape valid json.
 			if gojson.IsJSON(v) {
-				r = append(r, v...)
+				buf.WriteString(string(v))
 				continue
 			}
 
-			r = append(r, '"')
+			buf.WriteByte('"')
 
 			// Encode the string to be valid JSON
 			for _, b := range v {
 				if b == '"' {
-					r = append(r, []byte{'\\', '"'}...)
+					buf.WriteString(`\"`)
 					continue
 				}
 				if b == '\\' {
-					r = append(r, []byte{'\\', '\\'}...)
+					buf.WriteString(`\\`)
 					continue
 				}
 
 				if b >= '\u0000' && b <= '\u001F' {
-					r = append(r, []byte{'\\', 'u', '0', '0'}...)
-					r = append(r, hex[b>>4])
-					r = append(r, hex[b&0xF])
+					buf.WriteString(`\u00`)
+					buf.WriteByte(hex[b>>4])
+					buf.WriteByte(hex[b&0xF])
 					continue
 				}
 
-				r = append(r, b)
+				buf.WriteByte(b)
 			}
 
-			r = append(r, '"')
+			buf.WriteByte('"')
 		}
 
-		r = append(r, '}')
-		buf = append(buf, r...)
+		buf.WriteByte('}')
 	}
 
-	buf = append(buf, ']')
-	return buf, nil
+	buf.WriteByte(']')
+
+	return buf.Bytes(), nil
 }
