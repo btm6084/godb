@@ -34,7 +34,10 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 	}
 
 	for i := 0; rows.Next(); i++ {
-		rows.Scan(scan...)
+		err := rows.Scan(scan...)
+		if err != nil {
+			return nil, err
+		}
 
 		if i == 0 {
 			buf.WriteByte('{')
@@ -91,6 +94,10 @@ func ToJSON(rows *sql.Rows) ([]byte, error) {
 		}
 
 		buf.WriteByte('}')
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 
 	buf.WriteByte(']')
