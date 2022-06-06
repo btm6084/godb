@@ -11,5 +11,6 @@ require (
 	github.com/lib/pq v1.10.0
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
 )
