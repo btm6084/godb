@@ -38,14 +38,18 @@ func boundParameter(d Dialect, n int) string {
 }
 
 // BuildWhere just joins all the where strings. Join should be AND or OR
-func (b *builder) BuildWhere(join string) (string, []interface{}) {
+func (b *builder) BuildWhere(join string) string {
+	if len(b.Where) < 1 {
+		return ""
+	}
+
 	join = strings.ToLower(join)
 	if join != "and" && join != "or" {
 		join = "AND"
 	}
 	join = strings.ToUpper(join)
 
-	return "WHERE (" + strings.Join(b.Where, ") "+join+" (") + ")", b.Args
+	return "WHERE (" + strings.Join(b.Where, ") "+join+" (") + ")"
 }
 
 // WhereDistinct adds to the where clause a term that requires the value in the given field to be distinct from the given value.
