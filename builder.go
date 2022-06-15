@@ -88,6 +88,18 @@ func (b *builder) WhereNotDistinct(field string, val interface{}) *builder {
 	return b
 }
 
+// WhereNull adds to the where clause a term that requires the value in the given field is null.
+func (b *builder) WhereNull(field string) *builder {
+	b.Where = append(b.Where, fmt.Sprintf(`%s <> ''`, field))
+	return b
+}
+
+// WhereNotNull adds to the where clause a term that requires the value in the given field is not null.
+func (b *builder) WhereNotNull(field string) *builder {
+	b.Where = append(b.Where, fmt.Sprintf(`%s IS NULL`, field))
+	return b
+}
+
 // WhereLess adds to the where clause a term that requires the value in the given field is less than the value.
 func (b *builder) WhereLess(field string, val interface{}) *builder {
 	b.Args = append(b.Args, val)
