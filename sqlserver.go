@@ -228,3 +228,89 @@ func (m *MSSQLDatastore) ExecWithMetrics(ctx context.Context, r metrics.Recorder
 
 	return res, err
 }
+
+// MSSQLTx implements the Transaction interface.
+type MSSQLTx struct {
+	db *sql.DB
+	tx *sql.Tx
+}
+
+// Fetch provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
+func (p *MSSQLTx) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
+	return p.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)
+}
+
+// FetchWithMetrics provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
+func (p *MSSQLTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
+	if p == nil {
+		return ErrEmptyObject
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("postgres", query, args...)
+	rows, err := p.tx.QueryContext(ctx, query, args...)
+	end()
+	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
+		return err
+	}
+
+	defer rows.Close()
+
+	end = r.Segment("GODB::FetchWithMetrics::UnmarshalWithMetrics")
+	err = UnmarshalWithMetrics(r, rows, &container)
+	end()
+	return err
+}
+
+// Exec provides a simple no-return-expected query as part of a transaction. We will run your query and send you on your way.
+// Great for inserts and updates.
+func (p *MSSQLTx) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return p.ExecWithMetrics(ctx, &metrics.NoOp{}, query, args...)
+}
+
+// ExecWithMetrics provides a simple no-return-expected query as part of a transaction. We will run your query and send you on your way.
+// Great for inserts and updates.
+func (p *MSSQLTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("postgres", query, args...)
+	res, err := p.tx.ExecContext(ctx, query, args...)
+	end()
+
+	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return nil, fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// Commit commits the transaction
+func (p *MSSQLTx) Commit() error {
+	return p.tx.Commit()
+}
+
+// Rollback commits the transaction
+func (p *MSSQLTx) Rollback() error {
+	return p.tx.Rollback()
+}
