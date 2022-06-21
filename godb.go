@@ -72,8 +72,7 @@ type Transaction interface {
 	Commit() error
 	Rollback() error
 
-	fetcher
-	executer
+	Database
 }
 
 type Fetcher interface {

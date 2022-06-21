@@ -235,14 +235,58 @@ type MSSQLTx struct {
 	tx *sql.Tx
 }
 
+// Ping sends a ping to the server and returns an error if it cannot connect.
+func (m *MSSQLTx) Ping(ctx context.Context) error {
+	if m == nil {
+		return ErrEmptyObject
+	}
+
+	// This will choose the default recorder chosen during setup. If metrics.MetricsRecorder is never changed,
+	// this will default to the noop recorder.
+	r := metrics.GetRecorder(ctx)
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	var result []string
+	end := r.DatabaseSegment("mssql", "select getdate()")
+	rows, err := m.tx.QueryContext(ctx, "select getdate()")
+	end()
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+	Unmarshal(rows, &result)
+
+	if len(result) < 1 {
+		return errors.New("Ping Failed")
+	}
+
+	return err
+}
+
+// Shutdown has no context during a transaction currently, but is provided to implement the Database interface.
+func (*MSSQLTx) Shutdown(context.Context) error {
+	return nil
+}
+
+// Stats has no context during a transaction currently, but is provided to implement the Database interface.
+func (*MSSQLTx) Stats(context.Context) sql.DBStats {
+	return sql.DBStats{}
+}
+
 // Fetch provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
-func (p *MSSQLTx) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
-	return p.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)
+func (m *MSSQLTx) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
+	return m.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)
 }
 
 // FetchWithMetrics provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
-func (p *MSSQLTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
-	if p == nil {
+func (m *MSSQLTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, query string, container interface{}, args ...interface{}) error {
+	if m == nil {
 		return ErrEmptyObject
 	}
 
@@ -253,7 +297,7 @@ func (p *MSSQLTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, quer
 	}
 
 	end := r.DatabaseSegment("postgres", query, args...)
-	rows, err := p.tx.QueryContext(ctx, query, args...)
+	rows, err := m.tx.QueryContext(ctx, query, args...)
 	end()
 	if err != nil {
 		if err.Error() == "pq: canceling statement due to user request" {
@@ -273,14 +317,14 @@ func (p *MSSQLTx) FetchWithMetrics(ctx context.Context, r metrics.Recorder, quer
 
 // Exec provides a simple no-return-expected query as part of a transaction. We will run your query and send you on your way.
 // Great for inserts and updates.
-func (p *MSSQLTx) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return p.ExecWithMetrics(ctx, &metrics.NoOp{}, query, args...)
+func (m *MSSQLTx) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return m.ExecWithMetrics(ctx, &metrics.NoOp{}, query, args...)
 }
 
 // ExecWithMetrics provides a simple no-return-expected query as part of a transaction. We will run your query and send you on your way.
 // Great for inserts and updates.
-func (p *MSSQLTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
-	if p == nil {
+func (m *MSSQLTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) (sql.Result, error) {
+	if m == nil {
 		return nil, ErrEmptyObject
 	}
 
@@ -291,7 +335,7 @@ func (p *MSSQLTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query
 	}
 
 	end := r.DatabaseSegment("postgres", query, args...)
-	res, err := p.tx.ExecContext(ctx, query, args...)
+	res, err := m.tx.ExecContext(ctx, query, args...)
 	end()
 
 	if err != nil {
@@ -305,12 +349,45 @@ func (p *MSSQLTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, query
 	return res, nil
 }
 
+// FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (m *MSSQLTx) FetchJSON(ctx context.Context, query string, args ...interface{}) ([]byte, error) {
+	return m.FetchJSONWithMetrics(ctx, &metrics.NoOp{}, query, args...)
+}
+
+// FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (m *MSSQLTx) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) ([]byte, error) {
+	if m == nil {
+		return nil, ErrEmptyObject
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("mssql", query, args...)
+	rows, err := m.tx.QueryContext(ctx, query, args...)
+	end()
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	end = r.Segment("GODB::FetchWithMetrics::FetchJSONWithMetrics")
+	j, err := ToJSON(rows)
+	end()
+
+	return j, err
+}
+
 // Commit commits the transaction
-func (p *MSSQLTx) Commit() error {
-	return p.tx.Commit()
+func (m *MSSQLTx) Commit() error {
+	return m.tx.Commit()
 }
 
 // Rollback commits the transaction
-func (p *MSSQLTx) Rollback() error {
-	return p.tx.Rollback()
+func (m *MSSQLTx) Rollback() error {
+	return m.tx.Rollback()
 }

@@ -64,7 +64,7 @@ func (p *PostgresDatastore) Ping(ctx context.Context) error {
 	}
 
 	var result []string
-	end := r.DatabaseSegment("mssql", "select now()")
+	end := r.DatabaseSegment("postgres", "select now()")
 	rows, err := p.db.QueryContext(ctx, "select now()")
 	end()
 	if err != nil {
@@ -269,6 +269,54 @@ type PostgresTx struct {
 	tx *sql.Tx
 }
 
+// Ping sends a ping to the server and returns an error if it cannot connect.
+func (p *PostgresTx) Ping(ctx context.Context) error {
+	if p == nil {
+		return ErrEmptyObject
+	}
+
+	// This will choose the default recorder chosen during setup. If metrics.MetricsRecorder is never changed,
+	// this will default to the noop recorder.
+	r := metrics.GetRecorder(ctx)
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	var result []string
+	end := r.DatabaseSegment("postgres", "select now()")
+	rows, err := p.db.QueryContext(ctx, "select now()")
+	end()
+	if err != nil {
+		if err.Error() == "pq: canceling statement due to user request" {
+			return fmt.Errorf("%w: %v", ctx.Err(), err)
+		}
+
+		return err
+	}
+
+	defer rows.Close()
+	Unmarshal(rows, &result)
+
+	if len(result) < 1 {
+		return errors.New("Ping Failed")
+	}
+
+	return err
+}
+
+// Shutdown has no context during a transaction currently, but is provided to implement the Database interface.
+func (*PostgresTx) Shutdown(context.Context) error {
+	return nil
+}
+
+// Stats has no context during a transaction currently, but is provided to implement the Database interface.
+func (*PostgresTx) Stats(context.Context) sql.DBStats {
+	return sql.DBStats{}
+}
+
 // Fetch provides a simple query-and-get operation as part of a transaction. We will run your query and fill your container.
 func (p *PostgresTx) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
 	return p.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)
@@ -337,6 +385,39 @@ func (p *PostgresTx) ExecWithMetrics(ctx context.Context, r metrics.Recorder, qu
 	}
 
 	return res, nil
+}
+
+// FetchJSON provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (p *PostgresTx) FetchJSON(ctx context.Context, query string, args ...interface{}) ([]byte, error) {
+	return p.FetchJSONWithMetrics(ctx, &metrics.NoOp{}, query, args...)
+}
+
+// FetchJSONWithMetrics provides a simple query-and-get operation. We will run your query and give you back the JSON representing your result set.
+func (p *PostgresTx) FetchJSONWithMetrics(ctx context.Context, r metrics.Recorder, query string, args ...interface{}) ([]byte, error) {
+	if p == nil {
+		return nil, ErrEmptyObject
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, QueryLimit)
+		defer cancel()
+	}
+
+	end := r.DatabaseSegment("mssql", query, args...)
+	rows, err := p.tx.QueryContext(ctx, query, args...)
+	end()
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	end = r.Segment("GODB::FetchWithMetrics::FetchJSONWithMetrics")
+	j, err := ToJSON(rows)
+	end()
+
+	return j, err
 }
 
 // Commit commits the transaction
