@@ -111,6 +111,19 @@ func (m *MSSQLDatastore) Stats(context.Context) sql.DBStats {
 	return sql.DBStats{}
 }
 
+// Begin starts a single transaction. You MUST call Transaction.Rollback, or Transaction.Commit after calling Begin, or you WILL
+// leak memory.
+// It is safe to defer Transaction.Rollback immediately, even if you don't intend to rollback.
+// Once you Commit, Rollback becomes a no-op.
+func (m *MSSQLDatastore) BeginTx(ctx context.Context) (Transaction, error) {
+	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &MSSQLTx{db: m.db, tx: tx}, nil
+}
+
 // Fetch provides a simple query-and-get operation. We will run your query and fill your container.
 func (m *MSSQLDatastore) Fetch(ctx context.Context, query string, container interface{}, args ...interface{}) error {
 	return m.FetchWithMetrics(ctx, &metrics.NoOp{}, query, container, args...)

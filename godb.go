@@ -18,6 +18,7 @@ import (
 var (
 	_ TransactionDB = (*PostgresDatastore)(nil)
 	_ Transaction   = (*PostgresTx)(nil)
+	_ TransactionDB = (*MSSQLDatastore)(nil)
 	_ Transaction   = (*MSSQLTx)(nil)
 
 	_ Database = (*MySQLDatastore)(nil)
